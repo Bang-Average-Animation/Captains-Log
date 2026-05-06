@@ -1,0 +1,1783 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Captain's Log</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --panel2: #1f2937;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --line: #374151;
+        --good: #22c55e;
+        --warn: #f59e0b;
+        --bad: #ef4444;
+        --blue: #38bdf8;
+      }
+
+      .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(135deg, var(--panel), var(--panel2));
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+
+      .brand-block {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .app-logo {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+        border: 1px solid var(--line);
+        background: var(--bg);
+        color: var(--blue);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+        flex: 0 0 auto;
+      }
+
+      .app-header h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.1;
+      }
+
+      .version-pill {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+
+      .app-subtitle {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .header-meta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: var(--text);
+      }
+
+      .header-meta > div {
+        padding: 7px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .meta-label {
+        color: var(--muted);
+        margin-right: 6px;
+      }
+
+      .scope-note {
+        margin: 14px 22px 0 22px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .scope-note strong {
+        color: var(--text);
+      }
+
+      @media (max-width: 850px) {
+        .app-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .header-actions {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .header-meta {
+          flex-direction: column;
+          gap: 6px;
+        }
+      }
+
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 10px;
+      }
+
+      .tab-button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .tab-button:hover {
+        border-color: var(--blue);
+      }
+
+      .tab-button.active {
+        background: var(--panel2);
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.active {
+        display: block;
+      }
+
+      .placeholder-panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+        color: var(--text);
+      }
+
+      .placeholder-panel h2 {
+        margin-top: 0;
+      }
+
+      .placeholder-panel ul {
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      header {
+        padding: 22px 28px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(135deg, #0f172a, #111827);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+      }
+
+      .subtitle {
+        margin-top: 6px;
+        color: var(--muted);
+      }
+
+      main {
+        padding: 24px 28px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(160px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      @media (max-width: 1100px) {
+        .cards {
+          grid-template-columns: repeat(2, minmax(160px, 1fr));
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+      }
+
+      .card .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .card .value {
+        font-size: 24px;
+        margin-top: 8px;
+        font-weight: bold;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .asset-cell {
+        line-height: 1.2;
+      }
+
+      .asset-title {
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .asset-subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .asset-meta {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .asset-block {
+        line-height: 1.2;
+      }
+
+      .asset-block .asset-title {
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .asset-block .asset-subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .asset-block .asset-meta {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      input,
+      select {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+      }
+
+      input {
+        width: 340px;
+      }
+
+      select {
+        min-width: 210px;
+      }
+
+      .checkbox-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .checkbox-label input {
+        width: auto;
+      }
+
+      button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--panel2);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: var(--blue);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        background: #0b1220;
+        user-select: none;
+      }
+
+      th:hover {
+        color: var(--blue);
+        cursor: pointer;
+      }
+
+      th {
+        cursor: pointer;
+      }
+
+      th[title] {
+        text-decoration: underline dotted;
+        text-underline-offset: 3px;
+      }
+
+      tr {
+        cursor: pointer;
+      }
+
+      tr:hover td {
+        background: #172033;
+      }
+
+      .status {
+        font-weight: bold;
+        font-size: 12px;
+      }
+
+      .good {
+        color: var(--good);
+      }
+
+      .warn {
+        color: var(--warn);
+      }
+
+      .bad {
+        color: var(--bad);
+      }
+
+      .detail {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        min-height: 320px;
+      }
+
+      .detail h2 {
+        margin-top: 0;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .metric {
+        background: #0b1220;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+      }
+
+      .metric .label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric .value {
+        margin-top: 4px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      .section-title {
+        margin-top: 18px;
+        margin-bottom: 8px;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.05em;
+      }
+
+      .contribution {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 8px;
+        background: #0b1220;
+      }
+
+      .contribution .topline {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .contribution .subline {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .diagnosis {
+        margin-top: 8px;
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 12px;
+        border: 1px solid var(--line);
+      }
+
+      .diagnosis.warn {
+        color: var(--warn);
+        background: rgba(245, 158, 11, 0.08);
+      }
+
+      .diagnosis.bad {
+        color: var(--bad);
+        background: rgba(239, 68, 68, 0.08);
+      }
+
+      .diagnosis-title {
+        font-weight: bold;
+        margin-bottom: 3px;
+      }
+
+      .contribution:has(.diagnosis.bad) {
+        border-color: rgba(239, 68, 68, 0.75);
+      }
+
+      .contribution:has(.diagnosis.warn) {
+        border-color: rgba(245, 158, 11, 0.75);
+      }
+
+      .diagnosis.bad .diagnosis-title::before {
+        content: "WARN ";
+      }
+
+      .diagnosis.warn .diagnosis-title::before {
+        content: "INFO ";
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="app-header">
+      <div class="brand-block">
+        <div class="app-logo" title="Captain's Log">CL</div>
+
+        <div>
+          <h1>Captain's Log <span class="version-pill">v0.1 Alpha</span></h1>
+          <div class="app-subtitle">
+            Whole-of-factory diagnostics for Captain of Industry
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="header-meta">
+          <div>
+            <span class="meta-label">Last export</span>
+            <span id="lastExportInfo">-</span>
+          </div>
+
+          <div>
+            <span class="meta-label">Last refresh</span>
+            <span id="lastRefreshInfo">-</span>
+          </div>
+        </div>
+
+        <button onclick="loadBalance()">Refresh now</button>
+      </div>
+    </header>
+
+    <div class="scope-note">
+      <strong>Scope:</strong>
+      This alpha analyses the whole exported factory. It does not yet isolate
+      individual production chains, blocks, or build areas unless you use naming
+      conventions and filters. Farms and population demand are planned next.
+    </div>
+
+    <main>
+      <div class="tabs">
+        <button
+          class="tab-button active"
+          onclick="setTab('factory')"
+          id="tab-factory"
+        >
+          Factory Balance
+        </button>
+        <button class="tab-button" onclick="setTab('power')" id="tab-power">
+          Power
+        </button>
+        <button class="tab-button" onclick="setTab('farms')" id="tab-farms">
+          Farms
+        </button>
+        <button
+          class="tab-button"
+          onclick="setTab('population')"
+          id="tab-population"
+        >
+          Population
+        </button>
+      </div>
+
+      <div id="panel-factory" class="tab-panel active">
+        <div class="cards">
+          <div class="card">
+            <div class="label">World machines</div>
+            <div class="value" id="worldMachineCount">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Active machines</div>
+            <div class="value" id="activeMachineCount">-</div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input
+            id="searchBox"
+            placeholder="Search products, e.g. coal, exhaust, molten iron"
+          />
+
+          <select id="statusFilter">
+            <option value="all">All statuses</option>
+            <option value="attention">Needs attention</option>
+            <option value="shortfall">Shortfall</option>
+            <option value="external">External input required</option>
+            <option value="flow">Capacity / flow issues</option>
+            <option value="disposal">Disposal issues</option>
+            <option value="pollution">Pollution generated</option>
+            <option value="surplus">Surplus</option>
+            <option value="balanced">Balanced</option>
+          </select>
+        </div>
+
+        <div class="layout">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th
+                    onclick="setSort('name')"
+                    title="The product or resource being analysed."
+                  >
+                    Product <span id="sort-name"></span>
+                  </th>
+
+                  <th
+                    onclick="setSort('producedCapacity')"
+                    title="Maximum rate this product can be produced per minute by active machines with assigned recipes."
+                  >
+                    Can Produce <span id="sort-producedCapacity"></span>
+                  </th>
+
+                  <th
+                    onclick="setSort('productivelyConsumedCapacity')"
+                    title="Maximum productive demand per minute from machines that use this product as an input. This excludes disposal, flaring, venting, and other sink usage."
+                  >
+                    Needed <span id="sort-productivelyConsumedCapacity"></span>
+                  </th>
+
+                  <th
+                    onclick="setSort('disposedCapacity')"
+                    title="Maximum disposal or sink capacity per minute for this product, such as flaring, venting, dumping, injection, or similar removal."
+                  >
+                    Can Dispose <span id="sort-disposedCapacity"></span>
+                  </th>
+
+                  <th
+                    onclick="setSort('displayNetCapacity')"
+                    title="Net Supply = Can Produce minus Needed. Positive means potential surplus; negative means potential shortfall."
+                  >
+                    Net Supply <span id="sort-displayNetCapacity"></span>
+                  </th>
+
+                  <th
+                    onclick="setSort('displayNetCurrent')"
+                    title="Current Net = current production minus current productive use, based on current utilisation rather than full-capacity potential."
+                  >
+                    Current Net <span id="sort-displayNetCurrent"></span>
+                  </th>
+
+                  <th
+                    onclick="setSort('status')"
+                    title="Overall interpretation of the product balance, such as Surplus, Shortfall, External Input Required, or Disposal-related conditions."
+                  >
+                    Status <span id="sort-status"></span>
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody id="balanceBody"></tbody>
+            </table>
+          </div>
+
+          <div class="detail" id="detailPanel">
+            <h2>Select a product</h2>
+            <p class="small">
+              Click a row to see producers, consumers, and disposal paths.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-power" class="tab-panel">
+        <div class="cards">
+          <div class="card">
+            <div class="label">Power demand</div>
+            <div class="value" id="powerDemand">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Effective capacity</div>
+            <div class="value" id="powerCapacity">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Power margin</div>
+            <div class="value" id="powerMargin">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Power status</div>
+            <div class="value" id="powerStatus">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Registered generators</div>
+            <div class="value" id="generatorsCount">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Consumers</div>
+            <div class="value" id="consumersCount">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Power assets</div>
+            <div class="value" id="powerEntityGeneratorCount">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Power asset issues</div>
+            <div class="value" id="powerEntityIssueCount">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Listed asset capacity</div>
+            <div class="value" id="powerListedCapacity">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Diesel backup units</div>
+            <div class="value" id="dieselBackupUnits">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Mech production</div>
+            <div class="value" id="mechanicalProduction">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Mech demand</div>
+            <div class="value" id="mechanicalDemand">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Mech margin</div>
+            <div class="value" id="mechanicalMargin">-</div>
+          </div>
+        </div>
+
+        <div class="placeholder-panel" style="margin-bottom: 14px">
+          <h2>Power system notes</h2>
+          <p class="small">
+            Power grid totals come from the game electricity manager. Power
+            asset rows come from exported generator entities. Diesel backup can
+            be included or excluded from the displayed effective capacity.
+            Turbine steam input/output quantities are shown where exported, but
+            full chain isolation and root-cause tracing are not implemented yet.
+          </p>
+        </div>
+        <div class="toolbar">
+          <input
+            id="powerSearchBox"
+            placeholder="Search generators, e.g. diesel, turbine, empty"
+          />
+
+          <label class="checkbox-label">
+            <input id="includeDieselBackup" type="checkbox" checked />
+            Include diesel backup
+          </label>
+
+          <select id="powerFleetFilter">
+            <option value="all">All power assets</option>
+            <option value="primary">Primary power only</option>
+            <option value="diesel">Diesel backup only</option>
+            <option value="turbines">Turbines only</option>
+            <option value="electrical">Electric / solar generators only</option>
+          </select>
+
+          <select id="powerStatusFilter">
+            <option value="all">All generator statuses</option>
+            <option value="issues">Issues only</option>
+            <option value="fuel">Fuel issues</option>
+            <option value="lowoutput">Low output / idle</option>
+            <option value="ok">OK</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th
+                  onclick="setPowerSort('title')"
+                  title="The power asset name and entity ID."
+                >
+                  Asset <span id="power-sort-title"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('typeLabel')"
+                  title="Power asset group, such as diesel backup, electric generator, turbine, solar, or flywheel."
+                >
+                  Group <span id="power-sort-typeLabel"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('state')"
+                  title="Current exported state for this asset. Some assets expose richer state than others."
+                >
+                  State <span id="power-sort-state"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('maxCapacity')"
+                  title="Electrical generation capacity where exported. Solar and electric generators should populate this."
+                >
+                  Elec Cap <span id="power-sort-maxCapacity"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('generated')"
+                  title="Current electrical generation where exported. Electric generators populate this; solar current may need deeper exporter data later."
+                >
+                  Elec Cur <span id="power-sort-generated"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('mechanicalCapacity')"
+                  title="Mechanical power production capacity for turbines/mechanical generators."
+                >
+                  Mech Cap <span id="power-sort-mechanicalCapacity"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('mechanicalCurrent')"
+                  title="Current mechanical power produced by turbines/mechanical generators."
+                >
+                  Mech Cur <span id="power-sort-mechanicalCurrent"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('mechanicalUse')"
+                  title="Mechanical power currently consumed by electric generators."
+                >
+                  Mech Use <span id="power-sort-mechanicalUse"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('inputProductName')"
+                  title="Fuel or input product. For turbines this is steam input; for diesel this is fuel."
+                >
+                  Input <span id="power-sort-inputProductName"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('outputProductName')"
+                  title="Output product where exported. For turbines this is the resulting lower-pressure/depleted steam."
+                >
+                  Output <span id="power-sort-outputProductName"></span>
+                </th>
+
+                <th
+                  onclick="setPowerSort('status')"
+                  title="Dashboard interpretation based on exported state, fuel/input level, output, disabled/paused state, or missing data."
+                >
+                  Status <span id="power-sort-status"></span>
+                </th>
+              </tr>
+            </thead>
+
+            <tbody id="powerGeneratorsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="panel-farms" class="tab-panel">
+        <div class="placeholder-panel">
+          <h2>Farms</h2>
+          <p class="small">Planned farm and food production view.</p>
+          <ul>
+            <li>Farm / greenhouse list</li>
+            <li>Current crop and growth state</li>
+            <li>Average yield per year or month</li>
+            <li>Water and fertilizer status</li>
+            <li>Output buffers and crop schedule</li>
+            <li>Animal farm feed and output demand later</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="panel-population" class="tab-panel">
+        <div class="placeholder-panel">
+          <h2>Population</h2>
+          <p class="small">Planned settlement and population demand view.</p>
+          <ul>
+            <li>Population count</li>
+            <li>Food demand by category</li>
+            <li>Household goods / service demand</li>
+            <li>Water and supply requirements</li>
+            <li>Stock buffer coverage</li>
+            <li>Food production versus population need</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      let balanceData = null;
+      let selectedProductId = null;
+
+      let activeTab = "factory";
+
+      function setTab(tabName) {
+        activeTab = tabName;
+
+        const tabs = ["factory", "power", "farms", "population"];
+
+        for (const tab of tabs) {
+          const button = document.getElementById(`tab-${tab}`);
+          const panel = document.getElementById(`panel-${tab}`);
+
+          if (button) {
+            button.classList.toggle("active", tab === tabName);
+          }
+
+          if (panel) {
+            panel.classList.toggle("active", tab === tabName);
+          }
+        }
+      }
+
+      function powerStatusClass(status) {
+        const text = String(status || "").toLowerCase();
+
+        if (
+          text.includes("empty") ||
+          text.includes("disabled") ||
+          text.includes("no input") ||
+          text.includes("output full") ||
+          text.includes("no mech")
+        ) {
+          return "bad";
+        }
+
+        if (
+          text.includes("low") ||
+          text.includes("idle") ||
+          text.includes("paused") ||
+          text.includes("capacity only")
+        ) {
+          return "warn";
+        }
+
+        return "ok";
+      }
+
+      function powerStatusMatches(generator, filter) {
+        const status = String(generator.status || "").toLowerCase();
+
+        if (filter === "all") {
+          return true;
+        }
+
+        if (filter === "issues") {
+          return status !== "ok";
+        }
+
+        if (filter === "fuel") {
+          return status.includes("fuel");
+        }
+
+        if (filter === "lowoutput") {
+          return status.includes("low output") || status.includes("idle");
+        }
+
+        if (filter === "ok") {
+          return status === "ok";
+        }
+
+        return true;
+      }
+
+      function powerFleetMatches(generator, filter, includeDiesel) {
+        if (filter === "diesel") {
+          return generator.isDiesel === true;
+        }
+
+        if (!includeDiesel && generator.isDiesel === true) {
+          return false;
+        }
+
+        if (filter === "all") {
+          return true;
+        }
+
+        if (filter === "primary") {
+          return generator.isDiesel !== true;
+        }
+
+        if (filter === "turbines") {
+          return (
+            generator.isMechSource === true ||
+            String(generator.title || "")
+              .toLowerCase()
+              .includes("turbine")
+          );
+        }
+
+        if (filter === "electrical") {
+          return generator.isElectrical === true;
+        }
+
+        return true;
+      }
+
+      function renderPowerGenerators() {
+        const body = document.getElementById("powerGeneratorsBody");
+
+        if (!body) {
+          return;
+        }
+
+        const powerEntities = balanceData?.powerEntities;
+
+        if (!powerEntities || !powerEntities.success) {
+          body.innerHTML = `
+			<tr>
+				<td colspan="11" class="small">No power entity data found yet.</td>
+			</tr>
+		`;
+          return;
+        }
+
+        const searchTerm = (
+          document.getElementById("powerSearchBox")?.value || ""
+        )
+          .trim()
+          .toLowerCase();
+        const statusFilter =
+          document.getElementById("powerStatusFilter")?.value || "all";
+        const fleetFilter =
+          document.getElementById("powerFleetFilter")?.value || "all";
+        const includeDiesel =
+          document.getElementById("includeDieselBackup")?.checked !== false;
+
+        const rows = (powerEntities.generators || []).filter((generator) => {
+          const haystack = [
+            generator.displayTitle,
+            generator.customTitle,
+            generator.title,
+            generator.typeLabel,
+            generator.currentState,
+            generator.status,
+            generator.inputProductId,
+            generator.inputProductName,
+            generator.outputProductName,
+            generator.inputProductRaw,
+            generator.entityId,
+          ]
+            .join(" ")
+            .toLowerCase();
+
+          const matchesSearch = !searchTerm || haystack.includes(searchTerm);
+          const matchesStatus = powerStatusMatches(generator, statusFilter);
+          const matchesFleet = powerFleetMatches(
+            generator,
+            fleetFilter,
+            includeDiesel,
+          );
+
+          return matchesSearch && matchesStatus && matchesFleet;
+        });
+
+        if (rows.length === 0) {
+          body.innerHTML = `
+			<tr>
+				<td colspan="11" class="small">No generators match the current filter.</td>
+			</tr>
+		`;
+          return;
+        }
+
+        renderPowerSortIndicators();
+
+        body.innerHTML = sortedPowerRows(rows)
+          .map((generator) => {
+            const electricCapacity =
+              generator.maxCapacity > 0 ? fmtWhole(generator.maxCapacity) : "-";
+
+            const electricCurrent =
+              generator.generated > 0 ? fmtWhole(generator.generated) : "-";
+
+            const mechanicalCapacity =
+              generator.mechanicalCapacity > 0
+                ? fmtWhole(generator.mechanicalCapacity)
+                : "-";
+
+            const mechanicalCurrent =
+              generator.mechanicalCurrent > 0
+                ? fmtWhole(generator.mechanicalCurrent)
+                : "-";
+
+            const mechanicalUse =
+              generator.mechanicalUse > 0
+                ? fmtWhole(generator.mechanicalUse)
+                : "-";
+
+            let inputText = "-";
+
+            if (generator.inputBuffer || generator.inputCapacity > 0) {
+              const percent =
+                generator.fuelPercent === null
+                  ? ""
+                  : ` (${generator.fuelPercent.toFixed(0)}%)`;
+
+              inputText = `${generator.inputProductName || "Input"} ${fmtWhole(generator.inputQuantity)}/${fmtWhole(generator.inputCapacity)}${percent}`;
+            } else if (
+              generator.inputProductName &&
+              generator.inputProductName !== "-"
+            ) {
+              inputText = generator.inputProductName;
+            }
+
+            let outputText = "-";
+
+            if (generator.outputCapacity > 0) {
+              const percent =
+                generator.outputPercent === null
+                  ? ""
+                  : ` (${generator.outputPercent.toFixed(0)}%)`;
+
+              outputText = `${generator.outputProductName || "Output"} ${fmtWhole(generator.outputQuantity)}/${fmtWhole(generator.outputCapacity)}${percent}`;
+            } else if (
+              generator.outputProductName &&
+              generator.outputProductName !== "-"
+            ) {
+              outputText = generator.outputProductName;
+            }
+
+            const state =
+              generator.currentState ||
+              (generator.isPaused
+                ? "Paused"
+                : generator.isEnabledNow
+                  ? "Enabled"
+                  : "Disabled");
+
+            return `
+	<tr>
+		<td class="asset-cell">
+	<div class="asset-title">${generator.displayTitle || generator.title || "Power asset"}</div>
+	${
+    generator.customTitle &&
+    generator.title &&
+    generator.customTitle !== generator.title
+      ? `<div class="asset-subtitle">${generator.title}</div>`
+      : ""
+  }
+	<div class="asset-meta">#${generator.entityId}</div>
+</td>
+		<td>${generator.typeLabel}</td>
+		<td>${state}</td>
+		<td>${electricCapacity}</td>
+		<td>${electricCurrent}</td>
+		<td>${mechanicalCapacity}</td>
+		<td>${mechanicalCurrent}</td>
+		<td>${mechanicalUse}</td>
+		<td>${inputText}</td>
+		<td>${outputText}</td>
+		<td><span class="status ${powerStatusClass(generator.status)}">${generator.status}</span></td>
+	</tr>
+`;
+          })
+          .join("");
+      }
+
+      let sortKey = "status";
+      let sortDirection = "asc";
+      let powerSortKey = "status";
+      let powerSortDirection = "asc";
+
+      function fmt(value, signed = false) {
+        const number = Number(value || 0);
+        const sign = signed && number > 0 ? "+" : "";
+        return `${sign}${number.toFixed(2)}`;
+      }
+
+      function statusClass(status) {
+        if (status.includes("SHORTFALL") || status.includes("EXTERNAL"))
+          return "bad";
+        if (status.includes("CHECK") || status.includes("POLLUTION"))
+          return "warn";
+        return "good";
+      }
+
+      function setPowerSort(key) {
+        if (powerSortKey === key) {
+          powerSortDirection = powerSortDirection === "asc" ? "desc" : "asc";
+        } else {
+          powerSortKey = key;
+          powerSortDirection = "asc";
+        }
+
+        renderPowerGenerators();
+      }
+
+      function powerSortValue(generator, key) {
+        if (key === "title")
+          return String(
+            generator.displayTitle || generator.title || "",
+          ).toLowerCase();
+        if (key === "typeLabel")
+          return String(generator.typeLabel || "").toLowerCase();
+        if (key === "state")
+          return String(generator.currentState || "").toLowerCase();
+        if (key === "maxCapacity") return Number(generator.maxCapacity || 0);
+        if (key === "generated") return Number(generator.generated || 0);
+        if (key === "mechanicalCapacity")
+          return Number(generator.mechanicalCapacity || 0);
+        if (key === "mechanicalCurrent")
+          return Number(generator.mechanicalCurrent || 0);
+        if (key === "mechanicalUse")
+          return Number(generator.mechanicalUse || 0);
+        if (key === "usedMechPowerThisTick")
+          return Number(generator.usedMechPowerThisTick || 0);
+        if (key === "inputProductName")
+          return String(generator.inputProductName || "").toLowerCase();
+        if (key === "outputProductName")
+          return String(generator.outputProductName || "").toLowerCase();
+        if (key === "status")
+          return String(generator.status || "").toLowerCase();
+
+        return String(generator[key] || "").toLowerCase();
+      }
+
+      function sortedPowerRows(rows) {
+        return rows.slice().sort((a, b) => {
+          const av = powerSortValue(a, powerSortKey);
+          const bv = powerSortValue(b, powerSortKey);
+
+          let result = 0;
+
+          if (typeof av === "number" && typeof bv === "number") {
+            result = av - bv;
+          } else {
+            result = String(av).localeCompare(String(bv));
+          }
+
+          return powerSortDirection === "asc" ? result : -result;
+        });
+      }
+
+      function renderPowerSortIndicators() {
+        const keys = [
+          "title",
+          "typeLabel",
+          "state",
+          "maxCapacity",
+          "generated",
+          "mechanicalCapacity",
+          "mechanicalCurrent",
+          "mechanicalUse",
+          "inputProductName",
+          "outputProductName",
+          "status",
+        ];
+
+        for (const key of keys) {
+          const el = document.getElementById(`power-sort-${key}`);
+
+          if (!el) continue;
+
+          el.textContent =
+            key === powerSortKey
+              ? powerSortDirection === "asc"
+                ? "ASC"
+                : "DESC"
+              : "";
+        }
+      }
+
+      function setSort(key) {
+        if (sortKey === key) {
+          sortDirection = sortDirection === "asc" ? "desc" : "asc";
+        } else {
+          sortKey = key;
+          sortDirection = "asc";
+        }
+
+        renderTable();
+      }
+
+      function sortValue(row, key) {
+        const value = row[key];
+
+        if (typeof value === "number") {
+          return value;
+        }
+
+        if (value === null || value === undefined) {
+          return "";
+        }
+
+        return String(value).toLowerCase();
+      }
+
+      function sortedRows(rows) {
+        return rows.slice().sort((a, b) => {
+          const av = sortValue(a, sortKey);
+          const bv = sortValue(b, sortKey);
+
+          let result = 0;
+
+          if (typeof av === "number" && typeof bv === "number") {
+            result = av - bv;
+          } else {
+            result = String(av).localeCompare(String(bv));
+          }
+
+          return sortDirection === "asc" ? result : -result;
+        });
+      }
+
+      function renderSortIndicators() {
+        const keys = [
+          "name",
+          "producedCapacity",
+          "productivelyConsumedCapacity",
+          "disposedCapacity",
+          "displayNetCapacity",
+          "displayNetCurrent",
+          "status",
+        ];
+
+        for (const key of keys) {
+          const el = document.getElementById(`sort-${key}`);
+
+          if (!el) continue;
+
+          el.textContent =
+            key === sortKey ? (sortDirection === "asc" ? "ASC" : "DESC") : "";
+        }
+      }
+      async function loadBalance() {
+        const response = await fetch("/api/balance");
+        balanceData = await response.json();
+
+        renderMetadata();
+        renderTable();
+        renderSelectedDetail();
+        renderPowerGenerators();
+      }
+
+      function fmtWhole(value) {
+        const number = Number(value || 0);
+        return number.toLocaleString();
+      }
+
+      function fmtPercent(value) {
+        const number = Number(value || 0);
+        return `${number.toFixed(1)}%`;
+      }
+
+      function renderMetadata() {
+        const meta = balanceData.metadata;
+        const power = balanceData.power;
+
+        document.getElementById("worldMachineCount").textContent = fmtWhole(
+          meta.worldMachineCount,
+        );
+        document.getElementById("activeMachineCount").textContent = fmtWhole(
+          meta.activeMachineCount,
+        );
+        const lastExportInfo = document.getElementById("lastExportInfo");
+        if (lastExportInfo) {
+          lastExportInfo.textContent = `${meta.snapshotTrigger || "-"} #${meta.snapshotExportCount ?? "-"}`;
+        }
+
+        const lastRefreshInfo = document.getElementById("lastRefreshInfo");
+        if (lastRefreshInfo) {
+          lastRefreshInfo.textContent = new Date().toLocaleTimeString();
+        }
+
+        if (!power || !power.success) {
+          document.getElementById("powerDemand").textContent = "-";
+          document.getElementById("powerCapacity").textContent = "-";
+          document.getElementById("powerMargin").textContent = "-";
+          document.getElementById("powerStatus").textContent = "No data";
+          document.getElementById("generatorsCount").textContent = "-";
+          document.getElementById("consumersCount").textContent = "-";
+          document.getElementById("powerEntityGeneratorCount").textContent =
+            "-";
+          document.getElementById("powerEntityIssueCount").textContent = "-";
+          document.getElementById("powerListedCapacity").textContent = "-";
+          document.getElementById("dieselBackupUnits").textContent = "-";
+
+          document.getElementById("mechanicalProduction").textContent = "-";
+          document.getElementById("mechanicalDemand").textContent = "-";
+          document.getElementById("mechanicalMargin").textContent = "-";
+          return;
+        }
+
+        const powerEntities = balanceData.powerEntities;
+        const includeDiesel =
+          document.getElementById("includeDieselBackup")?.checked !== false;
+
+        const dieselBackupCapacity =
+          powerEntities && powerEntities.success
+            ? Number(powerEntities.dieselBackupCapacity || 0)
+            : 0;
+
+        const displayedPowerCapacity = includeDiesel
+          ? power.generationCapacity
+          : Math.max(0, power.generationCapacity - dieselBackupCapacity);
+
+        const displayedPowerMargin = displayedPowerCapacity - power.demanded;
+
+        const displayedUtilisationPercent =
+          displayedPowerCapacity > 0
+            ? (power.demanded / displayedPowerCapacity) * 100
+            : 0;
+
+        let displayedPowerStatus = "POWER OK";
+
+        if (displayedPowerMargin < 0) {
+          displayedPowerStatus = "POWER SHORTFALL";
+        } else if (displayedUtilisationPercent >= 90) {
+          displayedPowerStatus = "POWER NEAR LIMIT";
+        }
+
+        document.getElementById("powerDemand").textContent = fmtWhole(
+          power.demanded,
+        );
+        document.getElementById("powerCapacity").textContent = fmtWhole(
+          displayedPowerCapacity,
+        );
+        document.getElementById("powerMargin").textContent =
+          fmtWhole(displayedPowerMargin);
+        document.getElementById("powerStatus").textContent =
+          `${displayedPowerStatus} (${fmtPercent(displayedUtilisationPercent)})`;
+        document.getElementById("generatorsCount").textContent = fmtWhole(
+          power.generatorsCount,
+        );
+        document.getElementById("consumersCount").textContent = fmtWhole(
+          power.consumersCount,
+        );
+
+        if (!powerEntities || !powerEntities.success) {
+          document.getElementById("powerEntityGeneratorCount").textContent =
+            "-";
+          document.getElementById("powerEntityIssueCount").textContent = "-";
+          document.getElementById("powerListedCapacity").textContent = "-";
+          document.getElementById("dieselBackupUnits").textContent = "-";
+          document.getElementById("mechanicalProduction").textContent = "-";
+          document.getElementById("mechanicalDemand").textContent = "-";
+          document.getElementById("mechanicalMargin").textContent = "-";
+        } else {
+          const includeDiesel =
+            document.getElementById("includeDieselBackup")?.checked !== false;
+          const listedCapacity = includeDiesel
+            ? powerEntities.totalListedCapacity
+            : powerEntities.totalListedCapacityWithoutDiesel;
+
+          document.getElementById("powerEntityGeneratorCount").textContent =
+            fmtWhole(powerEntities.generatorCount);
+          document.getElementById("powerEntityIssueCount").textContent =
+            fmtWhole(powerEntities.issueCount);
+          document.getElementById("powerListedCapacity").textContent =
+            fmtWhole(listedCapacity);
+          document.getElementById("dieselBackupUnits").textContent =
+            `${fmtWhole(powerEntities.dieselGeneratorCount)} / ${fmtWhole(powerEntities.dieselBackupCapacity)}`;
+
+          document.getElementById("mechanicalProduction").textContent =
+            fmtWhole(powerEntities.mechanicalProductionCurrent || 0);
+
+          document.getElementById("mechanicalDemand").textContent = fmtWhole(
+            powerEntities.mechanicalDemand || 0,
+          );
+
+          document.getElementById("mechanicalMargin").textContent = fmtWhole(
+            powerEntities.mechanicalMarginCurrent || 0,
+          );
+        }
+      }
+
+      function statusMatchesFilter(row, filter) {
+        const status = String(row.status || "").toLowerCase();
+
+        if (filter === "all") {
+          return true;
+        }
+
+        if (filter === "attention") {
+          return (
+            status.includes("shortfall") ||
+            status.includes("external") ||
+            status.includes("check") ||
+            status.includes("bottleneck") ||
+            status.includes("pollution")
+          );
+        }
+
+        if (filter === "shortfall") {
+          return status.includes("shortfall");
+        }
+
+        if (filter === "external") {
+          return status.includes("external");
+        }
+
+        if (filter === "flow") {
+          return (
+            status.includes("check flow") || status.includes("capacity ok")
+          );
+        }
+
+        if (filter === "disposal") {
+          return status.includes("disposal");
+        }
+
+        if (filter === "pollution") {
+          return status.includes("pollution");
+        }
+
+        if (filter === "surplus") {
+          return status.includes("surplus");
+        }
+
+        if (filter === "balanced") {
+          return status.includes("balanced");
+        }
+
+        return true;
+      }
+
+      function filteredRows() {
+        const term = document
+          .getElementById("searchBox")
+          .value.trim()
+          .toLowerCase();
+        const statusFilter = document.getElementById("statusFilter").value;
+
+        return balanceData.rows.filter((row) => {
+          const matchesSearch =
+            !term ||
+            row.name.toLowerCase().includes(term) ||
+            row.productId.toLowerCase().includes(term) ||
+            row.status.toLowerCase().includes(term);
+
+          const matchesStatus = statusMatchesFilter(row, statusFilter);
+
+          return matchesSearch && matchesStatus;
+        });
+      }
+      function renderTable() {
+        const body = document.getElementById("balanceBody");
+        body.innerHTML = "";
+
+        renderSortIndicators();
+
+        for (const row of sortedRows(filteredRows())) {
+          const tr = document.createElement("tr");
+
+          tr.onclick = () => {
+            selectedProductId = row.productId;
+            renderSelectedDetail();
+          };
+
+          tr.innerHTML = `
+					<td>${row.name}</td>
+					<td>${fmt(row.producedCapacity)}</td>
+					<td>${fmt(row.productivelyConsumedCapacity)}</td>
+					<td>${fmt(row.disposedCapacity)}</td>
+					<td>${fmt(row.displayNetCapacity, true)}</td>
+					<td>${fmt(row.displayNetCurrent, true)}</td>
+					<td class="status ${statusClass(row.status)}">${row.status}</td>
+				`;
+
+          body.appendChild(tr);
+        }
+      }
+
+      function diagnosisRank(item) {
+        if (!item.diagnosis) {
+          return 3;
+        }
+
+        if (item.diagnosis.level === "bad") {
+          return 1;
+        }
+
+        if (item.diagnosis.level === "warn") {
+          return 2;
+        }
+
+        return 3;
+      }
+
+      function stateRank(item) {
+        const state = String(item.state || "").toLowerCase();
+
+        if (state.includes("outputfull")) {
+          return 1;
+        }
+
+        if (state.includes("notenoughinput")) {
+          return 2;
+        }
+
+        if (state.includes("paused")) {
+          return 3;
+        }
+
+        if (state.includes("working")) {
+          return 5;
+        }
+
+        return 4;
+      }
+
+      function contributionList(title, items, sign) {
+        if (!items || items.length === 0) {
+          return `
+			<div class="section-title">${title}</div>
+			<div class="small">None</div>
+		`;
+        }
+
+        const rows = items
+          .slice()
+          .sort((a, b) => {
+            const diagnosisDiff = diagnosisRank(a) - diagnosisRank(b);
+            if (diagnosisDiff !== 0) return diagnosisDiff;
+
+            const stateDiff = stateRank(a) - stateRank(b);
+            if (stateDiff !== 0) return stateDiff;
+
+            return Math.abs(b.capacityAmount) - Math.abs(a.capacityAmount);
+          })
+          .map((item) => {
+            const diagnosisHtml = item.diagnosis
+              ? `
+					<div class="diagnosis ${item.diagnosis.level}">
+						<div class="diagnosis-title">${item.diagnosis.title}</div>
+						<div>${item.diagnosis.message}</div>
+					</div>
+				`
+              : "";
+
+            const displayTitle = item.displayTitle || item.title || "Machine";
+            const subtitle =
+              item.customTitle && item.title && item.customTitle !== item.title
+                ? `<div class="asset-subtitle">${item.title}</div>`
+                : "";
+
+            return `
+				<div class="contribution">
+					<div class="topline">
+						<strong>${sign}${fmt(item.capacityAmount)}/min cap, ${sign}${fmt(item.currentAmount)}/min cur</strong>
+						<span>${item.utilization}</span>
+					</div>
+
+					<div class="asset-block">
+						<div class="asset-title">${displayTitle}</div>
+						${subtitle}
+						<div class="asset-meta">#${item.machineId || item.entityId || ""}</div>
+					</div>
+
+					<div class="subline">${item.recipeId} | ${item.state}</div>
+					${diagnosisHtml}
+				</div>
+			`;
+          })
+          .join("");
+
+        return `
+		<div class="section-title">${title}</div>
+		${rows}
+	`;
+      }
+
+      function renderSelectedDetail() {
+        const panel = document.getElementById("detailPanel");
+
+        if (!balanceData || !selectedProductId) {
+          return;
+        }
+
+        const row = balanceData.rows.find(
+          (item) => item.productId === selectedProductId,
+        );
+
+        if (!row) {
+          panel.innerHTML = `
+					<h2>Select a product</h2>
+					<p class="small">Click a row to see producers, consumers, and disposal paths.</p>
+				`;
+          return;
+        }
+
+        let metricsHtml = "";
+
+        if (row.isPureDisposal) {
+          metricsHtml = `
+		<div class="metric"><div class="label">Generated capacity</div><div class="value">${fmt(row.producedCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Can dispose</div><div class="value">${fmt(row.disposedCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Spare disposal capacity</div><div class="value">${fmt(row.spareDisposalCapacity, true)}/min</div></div>
+		<div class="metric"><div class="label">Unmanaged current</div><div class="value">${fmt(row.unmanagedCurrent, true)}/min</div></div>
+	`;
+        } else if (row.isOverflowDisposal) {
+          metricsHtml = `
+		<div class="metric"><div class="label">Can produce</div><div class="value">${fmt(row.producedCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Needed</div><div class="value">${fmt(row.productivelyConsumedCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Net supply</div><div class="value">${fmt(row.displayNetCapacity, true)}/min</div></div>
+		<div class="metric"><div class="label">Current net</div><div class="value">${fmt(row.displayNetCurrent, true)}/min</div></div>
+		<div class="metric"><div class="label">Overflow disposal capacity</div><div class="value">${fmt(row.disposedCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Excess needing disposal</div><div class="value">${fmt(row.overflowAmountCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Spare overflow disposal</div><div class="value">${fmt(row.spareOverflowDisposalCapacity, true)}/min</div></div>
+	`;
+        } else {
+          metricsHtml = `
+		<div class="metric"><div class="label">Can produce</div><div class="value">${fmt(row.producedCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Needed</div><div class="value">${fmt(row.productivelyConsumedCapacity)}/min</div></div>
+		<div class="metric"><div class="label">Net supply</div><div class="value">${fmt(row.displayNetCapacity, true)}/min</div></div>
+		<div class="metric"><div class="label">Current net</div><div class="value">${fmt(row.displayNetCurrent, true)}/min</div></div>
+	`;
+        }
+        panel.innerHTML = `
+				<h2>${row.name}</h2>
+				<div class="small">${row.productId} | ${row.type}</div>
+				<p class="status ${statusClass(row.status)}">${row.status}</p>
+
+				<div class="metric-grid">
+					${metricsHtml}
+				</div>
+
+				${contributionList("Producers", row.producers, "+")}
+				${contributionList("Productive consumers", row.productConsumers, "-")}
+				${contributionList("Disposal / sinks / venting", row.disposers, "-")}
+			`;
+      }
+
+      document
+        .getElementById("searchBox")
+        ?.addEventListener("input", renderTable);
+      document
+        .getElementById("statusFilter")
+        ?.addEventListener("change", renderTable);
+      document
+        .getElementById("powerSearchBox")
+        ?.addEventListener("input", renderPowerGenerators);
+      document
+        .getElementById("powerStatusFilter")
+        ?.addEventListener("change", renderPowerGenerators);
+      document
+        .getElementById("powerFleetFilter")
+        ?.addEventListener("change", renderPowerGenerators);
+      document
+        .getElementById("includeDieselBackup")
+        ?.addEventListener("change", () => {
+          renderMetadata();
+          renderPowerGenerators();
+        });
+
+      loadBalance();
+      setInterval(loadBalance, 10000);
+    </script>
+  </body>
+</html>
