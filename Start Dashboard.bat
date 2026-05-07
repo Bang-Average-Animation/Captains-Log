@@ -4,7 +4,7 @@ setlocal
 title Captain's Log Dashboard
 
 set "ROOT=%~dp0"
-set "DASHBOARD=%ROOT%cl-dashboard"
+set "DASHBOARD=%ROOT%dashboard"
 set "NODE=%ROOT%node\node.exe"
 
 if not exist "%NODE%" (

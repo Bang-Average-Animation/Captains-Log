@@ -1,0 +1,31 @@
+# Node dependencies
+node_modules/
+
+# Bundled Node runtime for release packages
+node/
+
+# Build and release outputs
+builds/
+RELEASES/
+release-output/
+*.zip
+
+# Runtime/exported game data
+dumps/
+exports/
+*.jsonl
+
+# Logs
+*.log
+npm-debug.log*
+
+# Windows junk
+Thumbs.db
+desktop.ini
+
+# Local/editor settings
+.vscode/
+
+# Environment/config
+.env
+.env.local

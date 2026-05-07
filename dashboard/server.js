@@ -847,6 +847,7 @@ function calculateBalance() {
       state: machine.currentState,
       utilization: machine.utilization,
       recipeId: recipe.id,
+      isPaused: machine.isPaused === true,
       diagnosis: null,
     });
   }
@@ -878,6 +879,7 @@ function calculateBalance() {
       state: machine.currentState,
       utilization: machine.utilization,
       recipeId: recipe.id,
+      isPaused: machine.isPaused === true,
       diagnosis: null,
     });
   }
@@ -909,6 +911,7 @@ function calculateBalance() {
       state: machine.currentState,
       utilization: machine.utilization,
       recipeId: recipe.id,
+      isPaused: machine.isPaused === true,
       diagnosis: null,
     });
   }
@@ -1100,8 +1103,7 @@ function calculateBalance() {
   const activeMachines = machines.filter(
     (machine) =>
       machine.isConstructed === true &&
-      machine.isEnabled === true &&
-      machine.isPaused !== true,
+      (machine.isEnabled === true || machine.isPaused === true),
   );
 
   for (const machine of activeMachines) {
@@ -1150,7 +1152,8 @@ function calculateBalance() {
     }
 
     const cyclesPerMinute = TICKS_PER_MINUTE / durationTicks;
-    const utilizationFactor = parsePercent(machine.utilization);
+    const isPaused = machine.isPaused === true;
+    const utilizationFactor = isPaused ? 0 : parsePercent(machine.utilization);
     const disposalUse = isDisposalUse(machine, recipe);
 
     for (const input of recipe.inputs ?? []) {
@@ -1224,7 +1227,7 @@ function calculateBalance() {
     }
   }
 
-  const rows = Array.from(balance.values())
+  const allRows = Array.from(balance.values())
     .map((row) => {
       const disposal = hasDisposal(row);
       const pureDisposal = isPureDisposalRow(row);
@@ -1249,14 +1252,174 @@ function calculateBalance() {
         spareOverflowDisposalCurrent: spareOverflowDisposalCurrent(row),
 
         status: statusFor(row),
+        isPollution: isPollutionProduct(row.productId),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const pollutionRows = allRows.filter((row) => row.isPollution);
+
+  const currentAirPollutionRate = pollutionRows.reduce(
+    (total, row) => total + Math.max(0, Number(row.producedCurrent || 0)),
+    0,
+  );
+
+  const rows = allRows.filter((row) => !row.isPollution);
+  const rowsById = new Map(allRows.map((row) => [row.productId, row]));
+
+  function stateCountsLabel(stateCounts) {
+    return Object.entries(stateCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([state, count]) => `${count} ${state || "Unknown"}`)
+      .join(", ");
+  }
+
+  function buildDependencyForRow(row) {
+    const inputTotals = new Map();
+    const producerGroups = new Map();
+
+    for (const contribution of row.producers ?? []) {
+      const recipe = recipesById.get(contribution.recipeId);
+
+      if (!recipe) {
+        continue;
+      }
+
+      const durationTicks = parseDurationTicks(recipe.duration);
+
+      if (durationTicks <= 0) {
+        continue;
+      }
+
+      const cyclesPerMinute = TICKS_PER_MINUTE / durationTicks;
+      const groupTitle =
+        contribution.title || contribution.machineId || "Machine";
+      const groupKey = `${contribution.recipeId}|${groupTitle}`;
+
+      if (!producerGroups.has(groupKey)) {
+        producerGroups.set(groupKey, {
+          recipeId: contribution.recipeId,
+          title: groupTitle,
+          machineId: contribution.machineId,
+          machineCount: 0,
+          capacityAmount: 0,
+          currentAmount: 0,
+          pausedCount: 0,
+          stateCounts: {},
+        });
+      }
+
+      const group = producerGroups.get(groupKey);
+      const state = contribution.state || "Unknown";
+
+      group.machineCount += 1;
+      group.capacityAmount += Number(contribution.capacityAmount || 0);
+      group.currentAmount += Number(contribution.currentAmount || 0);
+
+      if (contribution.isPaused === true) {
+        group.pausedCount += 1;
+      }
+
+      group.stateCounts[state] = (group.stateCounts[state] || 0) + 1;
+
+      for (const input of recipe.inputs ?? []) {
+        const productId = input.productId;
+        const requiredAmount = parseQuantity(input.quantity) * cyclesPerMinute;
+
+        if (!productId || requiredAmount <= 0) {
+          continue;
+        }
+
+        if (!inputTotals.has(productId)) {
+          inputTotals.set(productId, {
+            productId,
+            name: productName(productId),
+            type: productType(productId),
+            requiredHere: 0,
+          });
+        }
+
+        inputTotals.get(productId).requiredHere += requiredAmount;
+      }
+    }
+
+    const inputs = Array.from(inputTotals.values())
+      .map((input) => {
+        const inputRow = rowsById.get(input.productId);
+
+        const totalFactoryDemand = inputRow
+          ? Number(inputRow.productivelyConsumedCapacity || 0)
+          : 0;
+
+        const canProduce = inputRow
+          ? Number(inputRow.producedCapacity || 0)
+          : 0;
+        const currentProduction = inputRow
+          ? Number(inputRow.producedCurrent || 0)
+          : 0;
+
+        const netCapacity = inputRow
+          ? Number(inputRow.displayNetCapacity || 0)
+          : 0 - input.requiredHere;
+
+        let status = inputRow ? inputRow.status : "NO PRODUCER";
+
+        if (canProduce <= 0 && input.requiredHere > 0) {
+          status = "NO PRODUCER";
+        } else if (netCapacity < -0.0001) {
+          status = "SHORTFALL";
+        }
+
+        return {
+          ...input,
+          requiredHere: Number(input.requiredHere || 0),
+          totalFactoryDemand,
+          canProduce,
+          currentProduction,
+          netCapacity,
+          status,
+        };
+      })
+      .sort((a, b) => {
+        const statusCompare = String(a.status).localeCompare(String(b.status));
+
+        if (statusCompare !== 0) {
+          return statusCompare;
+        }
+
+        return b.requiredHere - a.requiredHere;
+      });
+
+    const groups = Array.from(producerGroups.values())
+      .map((group) => ({
+        ...group,
+        stateSummary: stateCountsLabel(group.stateCounts),
+      }))
+      .sort((a, b) => b.capacityAmount - a.capacityAmount);
+
+    return {
+      productId: row.productId,
+      name: row.name,
+      type: row.type,
+      status: row.status,
+      producedCapacity: row.producedCapacity,
+      producedCurrent: row.producedCurrent,
+      totalFactoryDemand: row.productivelyConsumedCapacity,
+      netCapacity: row.displayNetCapacity,
+      producerGroups: groups,
+      inputs,
+    };
+  }
+
+  const dependencies = Object.fromEntries(
+    rows.map((row) => [row.productId, buildDependencyForRow(row)]),
+  );
 
   return {
     metadata: {
       worldMachineCount: machines.length,
       activeMachineCount: activeMachines.length,
+      currentAirPollutionRate,
       snapshotTrigger: worldMachinesExport.trigger,
       snapshotExportCount: worldMachinesExport.exportCount,
       ticksPerMinute: TICKS_PER_MINUTE,
@@ -1265,6 +1428,7 @@ function calculateBalance() {
     power: calculatePowerSummary(),
     powerEntities: calculatePowerEntitiesSummary(),
     rows,
+    dependencies,
     machines,
     skippedMachines,
   };

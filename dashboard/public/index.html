@@ -135,7 +135,22 @@
           gap: 6px;
         }
       }
+      .group-row td {
+        text-align: left !important;
+        background: #0b1220;
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        cursor: default;
+      }
 
+      .group-row:hover td {
+        background: #0b1220;
+      }
       .tabs {
         display: flex;
         gap: 10px;
@@ -419,6 +434,84 @@
         color: var(--bad);
       }
 
+      .paused-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(245, 158, 11, 0.65);
+        background: rgba(245, 158, 11, 0.12);
+        color: var(--warn);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .contribution.paused {
+        border-color: rgba(245, 158, 11, 0.75);
+        background: rgba(245, 158, 11, 0.05);
+      }
+
+      .dependency-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin: 10px 0 14px 0;
+      }
+
+      .crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #0b1220;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .crumb:hover {
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+
+      .crumb.good {
+        border-color: rgba(34, 197, 94, 0.65);
+        color: var(--good);
+      }
+
+      .crumb.warn {
+        border-color: rgba(245, 158, 11, 0.75);
+        color: var(--warn);
+      }
+
+      .crumb.bad {
+        border-color: rgba(239, 68, 68, 0.75);
+        color: var(--bad);
+      }
+
+      .crumb-separator {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .dependency-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 10px 0 14px 0;
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
       .detail {
         background: var(--panel);
         border: 1px solid var(--line);
@@ -563,8 +656,11 @@
 
     <div class="scope-note">
       <strong>Scope:</strong>
-      This alpha analyses the whole exported factory. It does not yet isolate
-      individual production chains, blocks, or build areas unless you use naming
+      This alpha analyses the whole exported factory. Factory Balance includes
+      constructed machines that are enabled or paused and have assigned/active
+      recipes. Paused machines are shown and flagged, but contribute 0 to
+      current production and consumption. It does not yet isolate individual
+      production chains, blocks, or build areas unless you use naming
       conventions and filters. Farms and population demand are planned next.
     </div>
 
@@ -576,6 +672,13 @@
           id="tab-factory"
         >
           Factory Balance
+        </button>
+        <button
+          class="tab-button"
+          onclick="setTab('dependencies')"
+          id="tab-dependencies"
+        >
+          Input Dependencies
         </button>
         <button class="tab-button" onclick="setTab('power')" id="tab-power">
           Power
@@ -600,8 +703,13 @@
           </div>
 
           <div class="card">
-            <div class="label">Active machines</div>
+            <div class="label">Included machines</div>
             <div class="value" id="activeMachineCount">-</div>
+          </div>
+
+          <div class="card">
+            <div class="label">Air pollution</div>
+            <div class="value" id="airPollutionRate">-</div>
           </div>
         </div>
 
@@ -621,6 +729,10 @@
             <option value="pollution">Pollution generated</option>
             <option value="surplus">Surplus</option>
             <option value="balanced">Balanced</option>
+          </select>
+
+          <select id="productTypeFilter">
+            <option value="all">All product groups</option>
           </select>
         </div>
 
@@ -692,7 +804,15 @@
           </div>
         </div>
       </div>
-
+      <div id="panel-dependencies" class="tab-panel">
+        <div class="detail" id="dependencyPanel">
+          <h2>Input Dependencies</h2>
+          <p class="small">
+            Select a product in Factory Balance, then use this tab to trace its
+            upstream inputs.
+          </p>
+        </div>
+      </div>
       <div id="panel-power" class="tab-panel">
         <div class="cards">
           <div class="card">
@@ -921,13 +1041,20 @@
     <script>
       let balanceData = null;
       let selectedProductId = null;
+      let dependencyTrail = [];
 
       let activeTab = "factory";
 
       function setTab(tabName) {
         activeTab = tabName;
 
-        const tabs = ["factory", "power", "farms", "population"];
+        const tabs = [
+          "factory",
+          "dependencies",
+          "power",
+          "farms",
+          "population",
+        ];
 
         for (const tab of tabs) {
           const button = document.getElementById(`tab-${tab}`);
@@ -940,6 +1067,10 @@
           if (panel) {
             panel.classList.toggle("active", tab === tabName);
           }
+        }
+
+        if (tabName === "dependencies") {
+          renderDependencies();
         }
       }
 
@@ -1360,8 +1491,10 @@
         balanceData = await response.json();
 
         renderMetadata();
+        populateProductTypeFilter();
         renderTable();
         renderSelectedDetail();
+        renderDependencies();
         renderPowerGenerators();
       }
 
@@ -1375,6 +1508,127 @@
         return `${number.toFixed(1)}%`;
       }
 
+      function productTypeLabel(type) {
+        const raw = String(type || "").trim();
+
+        if (!raw) {
+          return "Unknown / ungrouped";
+        }
+
+        return raw
+          .replace(/^ProductType_/, "")
+          .replace(/^Type_/, "")
+          .replace(/Proto$/i, "")
+          .replace(/\bProto\b/gi, "")
+          .replace(/_/g, " ")
+          .replace(/([a-z])([A-Z])/g, "$1 $2")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function romanNumeralPattern() {
+        return "\\b(I|II|III|IV|V|VI|VII|VIII|IX|X)\\b";
+      }
+
+      function productFamilyLabel(row) {
+        const name = String(row.name || "").trim();
+        const productId = String(row.productId || "").trim();
+
+        const source = name || productId;
+
+        if (!source) {
+          return productTypeLabel(row.type);
+        }
+
+        let family = source
+          .replace(/^Product_/, "")
+          .replace(/_/g, " ")
+          .replace(/([a-z])([A-Z])/g, "$1 $2")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        // Group common tiered products together:
+        // "Lab Equipment II" -> "Lab Equipment"
+        // "Vehicle Parts III" -> "Vehicle Parts"
+        family = family.replace(
+          new RegExp(`\\s+${romanNumeralPattern()}$`, "i"),
+          "",
+        );
+
+        // Group stage/variant products together:
+        // "Microchips stage 1 a" -> "Microchips"
+        // "Construction Parts 4" -> "Construction Parts"
+        family = family
+          .replace(/\s+stage\s+\d+\s*[a-z]?$/i, "")
+          .replace(/\s+tier\s+\d+$/i, "")
+          .replace(/\s+level\s+\d+$/i, "")
+          .replace(/\s+\d+\s*[a-z]?$/i, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        if (!family) {
+          return productTypeLabel(row.type);
+        }
+
+        return family;
+      }
+
+      function groupedProductRows(rows) {
+        const groups = new Map();
+
+        for (const row of rows) {
+          const groupName = productFamilyLabel(row);
+
+          if (!groups.has(groupName)) {
+            groups.set(groupName, []);
+          }
+
+          groups.get(groupName).push(row);
+        }
+
+        return Array.from(groups.entries()).sort((a, b) =>
+          a[0].localeCompare(b[0]),
+        );
+      }
+
+      function populateProductTypeFilter() {
+        const select = document.getElementById("productTypeFilter");
+
+        if (!select || !balanceData || !Array.isArray(balanceData.rows)) {
+          return;
+        }
+
+        const currentValue = select.value || "all";
+
+        const productTypes = Array.from(
+          new Set(
+            balanceData.rows.map(
+              (row) => String(row.type || "").trim() || "__unknown",
+            ),
+          ),
+        ).sort((a, b) =>
+          productTypeLabel(a).localeCompare(productTypeLabel(b)),
+        );
+
+        select.innerHTML = `
+    <option value="all">All product groups</option>
+    ${productTypes
+      .map(
+        (type) => `<option value="${type}">${productTypeLabel(type)}</option>`,
+      )
+      .join("")}
+  `;
+
+        if (
+          currentValue === "all" ||
+          productTypes.some((type) => type === currentValue)
+        ) {
+          select.value = currentValue;
+        } else {
+          select.value = "all";
+        }
+      }
+
       function renderMetadata() {
         const meta = balanceData.metadata;
         const power = balanceData.power;
@@ -1385,6 +1639,10 @@
         document.getElementById("activeMachineCount").textContent = fmtWhole(
           meta.activeMachineCount,
         );
+        const airPollutionRate = document.getElementById("airPollutionRate");
+        if (airPollutionRate) {
+          airPollutionRate.textContent = `${fmt(meta.currentAirPollutionRate || 0)}/min`;
+        }
         const lastExportInfo = document.getElementById("lastExportInfo");
         if (lastExportInfo) {
           lastExportInfo.textContent = `${meta.snapshotTrigger || "-"} #${meta.snapshotExportCount ?? "-"}`;
@@ -1552,18 +1810,28 @@
           .getElementById("searchBox")
           .value.trim()
           .toLowerCase();
+
         const statusFilter = document.getElementById("statusFilter").value;
+        const productTypeFilter =
+          document.getElementById("productTypeFilter")?.value || "all";
 
         return balanceData.rows.filter((row) => {
+          const rowType = String(row.type || "").trim() || "__unknown";
+
           const matchesSearch =
             !term ||
             row.name.toLowerCase().includes(term) ||
             row.productId.toLowerCase().includes(term) ||
-            row.status.toLowerCase().includes(term);
+            row.status.toLowerCase().includes(term) ||
+            productTypeLabel(row.type).toLowerCase().includes(term) ||
+            productFamilyLabel(row).toLowerCase().includes(term);
 
           const matchesStatus = statusMatchesFilter(row, statusFilter);
 
-          return matchesSearch && matchesStatus;
+          const matchesProductType =
+            productTypeFilter === "all" || rowType === productTypeFilter;
+
+          return matchesSearch && matchesStatus && matchesProductType;
         });
       }
       function renderTable() {
@@ -1572,25 +1840,41 @@
 
         renderSortIndicators();
 
-        for (const row of sortedRows(filteredRows())) {
-          const tr = document.createElement("tr");
+        const rows = filteredRows();
+        const groups = groupedProductRows(rows);
 
-          tr.onclick = () => {
-            selectedProductId = row.productId;
-            renderSelectedDetail();
-          };
+        for (const [groupName, groupRows] of groups) {
+          const groupTr = document.createElement("tr");
+          groupTr.className = "group-row";
 
-          tr.innerHTML = `
-					<td>${row.name}</td>
-					<td>${fmt(row.producedCapacity)}</td>
-					<td>${fmt(row.productivelyConsumedCapacity)}</td>
-					<td>${fmt(row.disposedCapacity)}</td>
-					<td>${fmt(row.displayNetCapacity, true)}</td>
-					<td>${fmt(row.displayNetCurrent, true)}</td>
-					<td class="status ${statusClass(row.status)}">${row.status}</td>
-				`;
+          groupTr.innerHTML = `
+      <td colspan="7">${groupName} <span class="small">(${groupRows.length})</span></td>
+    `;
 
-          body.appendChild(tr);
+          body.appendChild(groupTr);
+
+          for (const row of sortedRows(groupRows)) {
+            const tr = document.createElement("tr");
+
+            tr.onclick = () => {
+              selectedProductId = row.productId;
+              dependencyTrail = [];
+              renderSelectedDetail();
+              renderDependencies();
+            };
+
+            tr.innerHTML = `
+        <td>${row.name}</td>
+        <td>${fmt(row.producedCapacity)}</td>
+        <td>${fmt(row.productivelyConsumedCapacity)}</td>
+        <td>${fmt(row.disposedCapacity)}</td>
+        <td>${fmt(row.displayNetCapacity, true)}</td>
+        <td>${fmt(row.displayNetCurrent, true)}</td>
+        <td class="status ${statusClass(row.status)}">${row.status}</td>
+      `;
+
+            body.appendChild(tr);
+          }
         }
       }
 
@@ -1667,12 +1951,20 @@
                 ? `<div class="asset-subtitle">${item.title}</div>`
                 : "";
 
+            const pausedBadge = item.isPaused
+              ? `<span class="paused-badge">Paused</span>`
+              : "";
+
+            const contributionClass = item.isPaused
+              ? "contribution paused"
+              : "contribution";
+
             return `
-				<div class="contribution">
-					<div class="topline">
-						<strong>${sign}${fmt(item.capacityAmount)}/min cap, ${sign}${fmt(item.currentAmount)}/min cur</strong>
-						<span>${item.utilization}</span>
-					</div>
+  <div class="${contributionClass}">
+    <div class="topline">
+      <strong>${sign}${fmt(item.capacityAmount)}/min cap, ${sign}${fmt(item.currentAmount)}/min cur ${pausedBadge}</strong>
+      <span>${item.utilization}</span>
+    </div>
 
 					<div class="asset-block">
 						<div class="asset-title">${displayTitle}</div>
@@ -1741,8 +2033,9 @@
         }
         panel.innerHTML = `
 				<h2>${row.name}</h2>
-				<div class="small">${row.productId} | ${row.type}</div>
+				<div class="small">${row.productId} | ${productTypeLabel(row.type)}</div>
 				<p class="status ${statusClass(row.status)}">${row.status}</p>
+<button onclick="setTab('dependencies')">View input dependencies</button>
 
 				<div class="metric-grid">
 					${metricsHtml}
@@ -1753,7 +2046,248 @@
 				${contributionList("Disposal / sinks / venting", row.disposers, "-")}
 			`;
       }
+      function dependencyStatusClass(status) {
+        return statusClass(String(status || ""));
+      }
 
+      function dependencyForProduct(productId) {
+        return balanceData?.dependencies?.[productId] || null;
+      }
+
+      function dependencyName(productId) {
+        const dependency = dependencyForProduct(productId);
+
+        if (dependency?.name) {
+          return dependency.name;
+        }
+
+        const row = balanceData?.rows?.find(
+          (item) => item.productId === productId,
+        );
+        return row?.name || productId;
+      }
+
+      function dependencyCrumbClass(productId) {
+        const dependency = dependencyForProduct(productId);
+        const status = String(dependency?.status || "").toUpperCase();
+
+        if (
+          status.includes("SHORTFALL") ||
+          status.includes("EXTERNAL") ||
+          status.includes("NO PRODUCER")
+        ) {
+          return "bad";
+        }
+
+        if (
+          status.includes("CHECK") ||
+          status.includes("BLOCKED") ||
+          status.includes("STARVED") ||
+          status.includes("ISSUE")
+        ) {
+          return "warn";
+        }
+
+        return "good";
+      }
+
+      function renderDependencyBreadcrumbs() {
+        if (!selectedProductId) {
+          return "";
+        }
+
+        const chain = [...dependencyTrail, selectedProductId];
+
+        return `
+    <div class="dependency-nav">
+      ${chain
+        .map((productId, index) => {
+          const separator =
+            index === 0 ? "" : `<span class="crumb-separator">&gt;</span>`;
+
+          return `
+            ${separator}
+            <span
+              class="crumb ${dependencyCrumbClass(productId)}"
+              onclick="jumpToDependencyCrumb(${index})"
+              title="${productId}"
+            >
+              ${dependencyName(productId)}
+            </span>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+      }
+
+      function jumpToDependencyCrumb(index) {
+        const chain = [...dependencyTrail, selectedProductId];
+        const productId = chain[index];
+
+        dependencyTrail = chain.slice(0, index);
+        selectedProductId = productId;
+
+        renderSelectedDetail();
+        renderDependencies();
+      }
+
+      function selectDependencyProduct(productId) {
+        if (selectedProductId && selectedProductId !== productId) {
+          dependencyTrail.push(selectedProductId);
+        }
+
+        selectedProductId = productId;
+
+        renderSelectedDetail();
+        renderDependencies();
+      }
+
+      function backUpDependencyChain() {
+        if (dependencyTrail.length === 0) {
+          return;
+        }
+
+        selectedProductId = dependencyTrail.pop();
+
+        renderSelectedDetail();
+        renderDependencies();
+      }
+
+      function renderDependencies() {
+        const panel = document.getElementById("dependencyPanel");
+
+        if (!panel) {
+          return;
+        }
+
+        if (!balanceData || !selectedProductId) {
+          panel.innerHTML = `
+      <h2>Input Dependencies</h2>
+      <p class="small">
+        Select a product in Factory Balance first, then return here to trace upstream inputs.
+      </p>
+    `;
+          return;
+        }
+
+        const row = balanceData.rows.find(
+          (item) => item.productId === selectedProductId,
+        );
+
+        const dependency = balanceData.dependencies?.[selectedProductId];
+
+        if (!row || !dependency) {
+          panel.innerHTML = `
+      <h2>Input Dependencies</h2>
+      <p class="small">No dependency data found for the selected product.</p>
+    `;
+          return;
+        }
+
+        const producerGroupsHtml =
+          dependency.producerGroups.length === 0
+            ? `<div class="small">No producers found for this product.</div>`
+            : dependency.producerGroups
+                .map(
+                  (group) => `
+              <div class="contribution">
+                <div class="topline">
+                  <strong>${group.title}</strong>
+                  <span>${group.machineCount} machines</span>
+                </div>
+                <div class="subline">${group.recipeId}</div>
+                <div class="small">
+                  Capacity ${fmt(group.capacityAmount)}/min |
+                  Current ${fmt(group.currentAmount)}/min |
+                  ${group.stateSummary || "No state data"}
+                </div>
+              </div>
+            `,
+                )
+                .join("");
+
+        const inputsHtml =
+          dependency.inputs.length === 0
+            ? `
+        <tr>
+          <td colspan="7" class="small">No direct upstream inputs found.</td>
+        </tr>
+      `
+            : dependency.inputs
+                .map(
+                  (input) => `
+              <tr onclick="selectDependencyProduct('${input.productId}')">
+                <td>${input.name}</td>
+                <td>${fmt(input.requiredHere)}</td>
+                <td>${fmt(input.totalFactoryDemand)}</td>
+                <td>${fmt(input.canProduce)}</td>
+                <td>${fmt(input.currentProduction)}</td>
+                <td>${fmt(input.netCapacity, true)}</td>
+                <td class="status ${dependencyStatusClass(input.status)}">${input.status}</td>
+              </tr>
+            `,
+                )
+                .join("");
+
+        panel.innerHTML = `
+    <h2>${dependency.name}</h2>
+    <div class="small">${dependency.productId} | ${productTypeLabel(dependency.type)}</div>
+    <p class="status ${statusClass(dependency.status)}">${dependency.status}</p>
+
+    ${renderDependencyBreadcrumbs()}
+
+    <div class="dependency-actions">
+      <button onclick="backUpDependencyChain()" ${dependencyTrail.length === 0 ? "disabled" : ""}>
+        Back up chain
+      </button>
+      <button onclick="setTab('factory')">
+        Back to Factory Balance
+      </button>
+    </div>
+
+    <div class="metric-grid">
+
+      <div class="metric">
+        <div class="label">Can produce</div>
+        <div class="value">${fmt(dependency.producedCapacity)}/min</div>
+      </div>
+      <div class="metric">
+        <div class="label">Current production</div>
+        <div class="value">${fmt(dependency.producedCurrent)}/min</div>
+      </div>
+      <div class="metric">
+        <div class="label">Total factory demand</div>
+        <div class="value">${fmt(dependency.totalFactoryDemand)}/min</div>
+      </div>
+      <div class="metric">
+        <div class="label">Net capacity</div>
+        <div class="value">${fmt(dependency.netCapacity, true)}/min</div>
+      </div>
+    </div>
+
+    <div class="section-title">Producer groups</div>
+    ${producerGroupsHtml}
+
+    <div class="section-title">Direct upstream inputs</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Input</th>
+          <th title="Input required by the machines producing the selected product.">Required here</th>
+          <th title="Total productive demand across the whole factory.">Total demand</th>
+          <th>Can produce</th>
+          <th>Current</th>
+          <th>Net</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${inputsHtml}
+      </tbody>
+    </table>
+  `;
+      }
       document
         .getElementById("searchBox")
         ?.addEventListener("input", renderTable);
@@ -1775,6 +2309,9 @@
           renderMetadata();
           renderPowerGenerators();
         });
+      document
+        .getElementById("productTypeFilter")
+        ?.addEventListener("change", renderTable);
 
       loadBalance();
       setInterval(loadBalance, 10000);
