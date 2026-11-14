@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyVersion>0.0.1.0</AssemblyVersion>
+    <Version>0.0.4</Version>
+    <GameAssemblies>$(COI_ROOT)/Captain of Industry_Data/Managed</GameAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Mafi" HintPath="$(GameAssemblies)/Mafi.dll" Private="false" />
+    <Reference Include="Mafi.Base" HintPath="$(GameAssemblies)/Mafi.Base.dll" Private="false" />
+    <Reference Include="Mafi.Core" HintPath="$(GameAssemblies)/Mafi.Core.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="CheckGameReferences" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(GameAssemblies)/Mafi.Core.dll')"
+           Text="Set COI_ROOT to your Captain of Industry installation directory." />
+  </Target>
+</Project>
