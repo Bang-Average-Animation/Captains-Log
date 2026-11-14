@@ -537,6 +537,14 @@ function calculateBalance() {
     products.map((product) => [product.productId, product]),
   );
 
+  function recipeForMachine(recipeId, machineId) {
+    const recipe = recipesById.get(recipeId);
+    if (recipe && Object.hasOwn(recipe.machineBindings ?? {}, machineId)) {
+      return { ...recipe, ...recipe.machineBindings[machineId] };
+    }
+    return recipe;
+  }
+
   function productName(productId) {
     return productsById.get(productId)?.name ?? productId;
   }
@@ -1121,7 +1129,7 @@ function calculateBalance() {
       continue;
     }
 
-    const recipe = recipesById.get(recipeId);
+    const recipe = recipeForMachine(recipeId, machine.machineId);
 
     if (!recipe) {
       skippedMachines.push({
@@ -1200,7 +1208,7 @@ function calculateBalance() {
 
   for (const row of balance.values()) {
     for (const contribution of row.producers) {
-      const recipe = recipesById.get(contribution.recipeId);
+      const recipe = recipeForMachine(contribution.recipeId, contribution.machineId);
       const machine = contribution.machine;
 
       if (!recipe || !machine) {
@@ -1279,7 +1287,7 @@ function calculateBalance() {
     const producerGroups = new Map();
 
     for (const contribution of row.producers ?? []) {
-      const recipe = recipesById.get(contribution.recipeId);
+      const recipe = recipeForMachine(contribution.recipeId, contribution.machineId);
 
       if (!recipe) {
         continue;

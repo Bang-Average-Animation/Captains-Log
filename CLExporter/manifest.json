@@ -1,6 +1,7 @@
 ﻿{
   "id": "CLExporter",
-  "version": "0.0.3",
+  "version": "0.0.4",
+  "min_game_version": "0.8.8d",
   "primary_dlls": ["CLExporter.dll"],
   "non_locking_dll_load": true,
   "can_add_to_saved_game": true,
